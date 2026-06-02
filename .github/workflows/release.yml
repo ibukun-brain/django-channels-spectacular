@@ -56,3 +56,40 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      # Required to create the GitHub Release and upload assets.
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Extract changelog section for this tag
+        run: |
+          # Tag is like "v0.1.0" → version is "0.1.0".
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Print the lines under "## [VERSION] ..." up to the next "## [".
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { flag = 1; next }
+            flag && /^## \[/        { exit }
+            flag                    { print }
+          ' docs/changelog.md > RELEASE_NOTES.md
+          echo "----- release notes for ${VERSION} -----"
+          cat RELEASE_NOTES.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          files: dist/*
+          fail_on_unmatched_files: false
