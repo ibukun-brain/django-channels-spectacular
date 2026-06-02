@@ -9,20 +9,18 @@
 
 AsyncAPI 3.0 documentation generator for Django Channels WebSocket consumers.
 
-Think of it as **drf-spectacular for Django Channels** — annotate your consumer's
-action handlers once; the package generates and serves the spec automatically.
-No more hand-maintaining YAML that drifts out of sync.
+Think of it as drf-spectacular for Django Channels: annotate your consumer's action handlers once and the package generates and serves the spec automatically. No more hand-maintaining YAML that slowly drifts out of sync with your actual implementation.
 
 ---
 
 ## Features
 
-- **Decorator-based annotation** — `@document_action` / `@document_event` on consumer methods
-- **Multi-consumer specs** — merge several consumers into one spec or serve them separately with a built-in switcher dropdown
-- **Hand-written YAML support** — render existing AsyncAPI templates via `manage.py export_asyncapi --template`
-- **Interactive try-it-out panel** — connect, send, and observe messages directly in the docs browser
-- **DRF / Pydantic / dataclass payload introspection** — no hand-written schemas needed
-- **AsyncAPI 3.0** — compliant spec rendered via the official `@asyncapi/react-component`
+- **Decorator-based annotation:** `@document_action` / `@document_event` on consumer methods
+- **Multi-consumer specs:** merge several consumers into one spec or serve them separately with a built-in switcher dropdown
+- **Hand-written YAML support:** render existing AsyncAPI templates via `manage.py export_asyncapi --template`
+- **Interactive try-it-out panel:** connect, send, and observe messages directly in the docs browser
+- **DRF / Pydantic / dataclass payload introspection:** no hand-written schemas needed
+- **AsyncAPI 3.0:** compliant spec rendered via the official `@asyncapi/react-component`
 
 ---
 
