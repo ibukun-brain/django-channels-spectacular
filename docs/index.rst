@@ -3,9 +3,13 @@ django-channels-spectacular
 
 .. rubric:: Auto-generate interactive AsyncAPI 3.0 docs for your Django Channels WebSocket consumers.
 
+.. image:: https://img.shields.io/pypi/v/django-channels-spectacular.svg
+   :target: https://pypi.org/project/django-channels-spectacular/
+   :alt: PyPI
+
 .. image:: https://github.com/ibukun-brain/django-channels-spectacular/actions/workflows/ci.yml/badge.svg?branch=master
    :target: https://github.com/ibukun-brain/django-channels-spectacular/actions/workflows/ci.yml
-   :alt: Tests
+   :alt: CI
 
 .. image:: https://readthedocs.org/projects/django-channels-spectacular/badge/?version=latest
    :target: https://django-channels-spectacular.readthedocs.io/en/latest/

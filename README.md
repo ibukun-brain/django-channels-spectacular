@@ -1,9 +1,8 @@
 # django-channels-spectacular
 
 [![PyPI](https://img.shields.io/pypi/v/django-channels-spectacular.svg)](https://pypi.org/project/django-channels-spectacular/)
-[![Python](https://img.shields.io/pypi/pyversions/django-channels-spectacular.svg)](https://pypi.org/project/django-channels-spectacular/)
 [![License: BSD-3](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/github/actions/workflow/status/ibukun-brain/django-channels-spectacular/ci.yml?branch=master&label=tests)](https://github.com/ibukun-brain/django-channels-spectacular/actions)
+[![CI](https://github.com/ibukun-brain/django-channels-spectacular/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/ibukun-brain/django-channels-spectacular/actions/workflows/ci.yml)
 [![Docs](https://readthedocs.org/projects/django-channels-spectacular/badge/?version=latest)](https://django-channels-spectacular.readthedocs.io)
 [![Coverage](https://codecov.io/gh/ibukun-brain/django-channels-spectacular/branch/master/graph/badge.svg)](https://codecov.io/gh/ibukun-brain/django-channels-spectacular)
 
@@ -231,7 +230,7 @@ class DispatchConsumer(AsyncJsonWebsocketConsumer):
 
     @document_action(
         action="ping",
-        summary="Health check — expects a pong event in return",
+        summary="Health check, expects a pong event in return",
         # payload=None → discriminator-only schema (no extra fields)
     )
     async def handle_ping(self, content):
@@ -402,7 +401,7 @@ CHANNELS_SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "DESCRIPTION": "Real-time ride and delivery dispatch.",
     "CHANNEL_PATH": "/ws/dispatch/",
-    # Static servers block — omit to derive from the request.
+    # Static servers block - omit to derive from the request.
     "SERVERS": {
         "production": {"host": "api.example.com", "protocol": "wss"},
     },
@@ -467,9 +466,7 @@ urlpatterns = [
 ]
 ```
 
-Switching consumers re-renders the full AsyncAPI React component **and**
-auto-fills the try-it-out panel's WebSocket URL by reading the selected
-spec's `servers` block — no manual URL editing needed.
+Switching consumers re-renders the full AsyncAPI React component and automatically populates the try-it-out panel's WebSocket URL from the selected spec's `servers` block, so there is no manual URL editing involved.
 
 ---
 
@@ -478,7 +475,7 @@ spec's `servers` block — no manual URL editing needed.
 Export the spec to a YAML file for SDK generation, CI artefacts, or
 committing alongside your API contracts.
 
-### Generator mode — from annotated consumers
+### Generator mode from annotated consumers
 
 ```bash
 # Single consumer
@@ -493,7 +490,7 @@ python manage.py export_asyncapi \
     --output docs/asyncapi.yaml
 ```
 
-### Template mode — from a hand-written YAML
+### Template mode from a hand-written YAML
 
 For projects that maintain a hand-written AsyncAPI YAML (or a Django
 template with `{{ WS_HOST }}` / `{{ WS_PROTOCOL }}` placeholders), use
@@ -615,36 +612,19 @@ class ExtendedConsumer(BaseConsumer):
 
 ---
 
-## Other ways to generate AsyncAPI docs
-
-This package is not the only path to an AsyncAPI 3.0 spec. Choose based on
-how your codebase is structured:
-
-| Approach | When to use |
-|----------|-------------|
-| **`@document_action` / `@document_event`** (this package) | New projects where consumers are the source of truth |
-| **`--template` + `export_asyncapi`** (this package) | Projects with an existing hand-written YAML — get host injection and title auto-fixing for free |
-| **[AsyncAPI CLI](https://www.asyncapi.com/docs/tools/cli)** directly | CI validation (`asyncapi validate`), linting, or code generation (`asyncapi generate`) without Django integration |
-| **[asyncapi-python](https://github.com/asyncapi/asyncapi-python)** | Pure-Python programmatic spec building; no Django integration |
-| **Hand-written YAML + static `AsyncAPIDocView`** | Small teams that find annotations overkill; point `AsyncAPIDocView(spec_url=...)` at a static YAML file |
-| **Postman / Insomnia export** | If WS flows are already in Postman Collections v2.1 — export and convert with `asyncapi convert` |
-| **[spectral](https://stoplight.io/open-source/spectral)** | Linting an existing spec against the AsyncAPI ruleset; combines with any generation approach |
-
----
-
 ## Running the tests
 
 ```bash
 cd django-channels-spectacular
 pip install -e ".[dev]"
-pytest -v
+python runtests.py
 ```
 
 ---
 
 ## Contributing
 
-Contributions are welcome — bug reports, feature requests, and pull requests alike.
+Contributions, bug reports, feature requests, and pull requests alike are welcome.
 
 ### Setting up a development environment
 
