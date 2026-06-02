@@ -74,6 +74,7 @@ jobs:
           path: dist/
 
       - name: Extract changelog section for this tag
+        id: notes
         run: |
           # Tag is like "v0.1.0" → version is "0.1.0".
           VERSION="${GITHUB_REF_NAME#v}"
@@ -83,13 +84,23 @@ jobs:
             flag && /^## \[/        { exit }
             flag                    { print }
           ' docs/changelog.md > RELEASE_NOTES.md
-          echo "----- release notes for ${VERSION} -----"
-          cat RELEASE_NOTES.md
+
+          # Fall back to auto-generated notes if the section is empty/missing.
+          if grep -q '[^[:space:]]' RELEASE_NOTES.md; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "----- release notes for ${VERSION} -----"
+            cat RELEASE_NOTES.md
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No changelog section for ${VERSION}; using auto-generated notes."
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
-          body_path: RELEASE_NOTES.md
+          # Use the changelog section when present, else GitHub auto-notes.
+          body_path: ${{ steps.notes.outputs.found == 'true' && 'RELEASE_NOTES.md' || '' }}
+          generate_release_notes: ${{ steps.notes.outputs.found != 'true' }}
           files: dist/*
           fail_on_unmatched_files: false
