@@ -8,6 +8,7 @@ so a partially-annotated payload still produces a useful schema.
 
 from __future__ import annotations
 
+import types
 import typing
 from dataclasses import MISSING
 from dataclasses import fields as dataclass_fields
@@ -16,8 +17,9 @@ from decimal import Decimal
 from typing import Any, Union, get_args, get_origin
 from uuid import UUID
 
-# Python 3.10+ unions written as ``X | Y`` have a different origin type.
-_UNION_TYPE = getattr(typing, "UnionType", None)
+# Python 3.10+ unions written as ``X | Y`` have origin ``types.UnionType``
+# (3.11-3.13); 3.14 reports ``typing.Union``, handled by the ``Union`` check.
+_UNION_TYPE = getattr(types, "UnionType", None)
 
 
 def python_type_to_schema(tp: Any) -> dict:
