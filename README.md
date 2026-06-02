@@ -43,7 +43,9 @@ Add to `INSTALLED_APPS`:
 
 ```python
 INSTALLED_APPS = [
+    "daphne",
     ...
+    "channels",
     "channels_spectacular",
 ]
 ```
@@ -79,10 +81,12 @@ class DispatchConsumer(AsyncJsonWebsocketConsumer):
             },
         ],
     )
-    async def handle_request_ride(self, content): ...
+    async def handle_request_ride(self, content):
+        ...
 
     @document_action(summary="Accept an offer", payload=AcceptOfferSerializer)
-    async def handle_accept_offer(self, content): ...
+    async def handle_accept_offer(self, content):
+        ...
 
     @document_event(
         "ride.offer",
@@ -100,15 +104,15 @@ class DispatchConsumer(AsyncJsonWebsocketConsumer):
             },
         ],
     )
-    async def ride_offer(self, event): ...
+    async def ride_offer(self, event):
+        ...
 
     @document_event("ride.accepted", summary="Ride accepted by driver")
-    async def ride_accepted(self, event): ...
+    async def ride_accepted(self, event):
+        ...
 ```
 
-**Action name inference** — `@document_action` strips the `handle_` prefix
-automatically: `handle_request_ride` → `"request_ride"`. Pass `action=` to
-override.
+**Action name inference:** `@document_action` strips the `handle_` prefix automatically, so `handle_request_ride` is documented as `request_ride`. Pass `action=` explicitly if you need to override that default.
 
 **Event type** is always explicit on `@document_event` because the method name
 (`ride_offer`) doesn't encode the full dotted type (`"ride.offer"`).
@@ -135,7 +139,7 @@ Visit `/ws-docs/asyncapi.yaml` for the raw spec.
 
 ---
 
-## Full example — Dispatch API
+## Full example: A Dispatch API
 
 A realistic consumer showing all decorator features and all three payload
 formats (dataclass, DRF serializer, Pydantic model):
@@ -151,7 +155,7 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels_spectacular import document_action, document_event
 
 # --------------------------------------------------------------------------
-# Payload option 1 — Python dataclass (no extra dependency)
+# Payload option 1: Python dataclass (no extra dependency)
 # --------------------------------------------------------------------------
 @dataclass
 class RequestRidePayload:
@@ -162,7 +166,7 @@ class RequestRidePayload:
 
 
 # --------------------------------------------------------------------------
-# Payload option 2 — DRF Serializer (pip install djangorestframework)
+# Payload option 2: DRF Serializer (pip install djangorestframework)
 # --------------------------------------------------------------------------
 from rest_framework import serializers
 
@@ -172,7 +176,7 @@ class AcceptOfferSerializer(serializers.Serializer):
 
 
 # --------------------------------------------------------------------------
-# Payload option 3 — Pydantic model (pip install pydantic)
+# Payload option 3: Pydantic model (pip install pydantic)
 # --------------------------------------------------------------------------
 from pydantic import BaseModel
 
@@ -275,8 +279,7 @@ table in [Payload formats](#payload-formats) shows the mapping in detail.
 
 ## Authentication
 
-WebSocket handshakes are HTTP upgrade requests, so Django's normal auth
-mechanisms apply — they just need to run in the ASGI middleware layer.
+WebSocket handshakes are HTTP upgrade requests, so Django's standard auth mechanisms apply out of the box. They just need to run in the ASGI middleware layer before the connection reaches your consumer.
 
 ### Cookie / session auth (browser clients)
 
@@ -309,6 +312,7 @@ reads it from `scope["query_string"]`:
 ```python
 # dispatch/middleware.py
 from urllib.parse import parse_qs
+from http.cookies import SimpleCookie
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
 import jwt
@@ -334,6 +338,36 @@ class QueryTokenAuthMiddleware:
                 await get_user_from_token(token) if token else AnonymousUser()
             )
         return await self.inner(scope, receive, send)
+
+class CookieJWTAuthMiddleware:
+    """
+    Reads a JWT from the `access_token` cookie and populates scope["user"].
+
+    Falls back to AnonymousUser when the cookie is absent or the token is
+    invalid/expired.
+    """
+
+    cookie_name = "access_token"
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "websocket":
+            token = None
+            for name, value in scope.get("headers", []):
+                if name == b"cookie":
+                    cookies = SimpleCookie()
+                    cookies.load(value.decode())
+                    morsel = cookies.get(self.cookie_name)
+                    token = morsel.value if morsel else None
+                    break
+            scope["user"] = (
+                await get_user_from_token(token)
+                if token
+                else AnonymousUser()
+            )
+        return await self.inner(scope, receive, send)
 ```
 
 ### Documenting auth in the spec
@@ -343,7 +377,7 @@ Add these settings and the generator inserts `securitySchemes` into the spec:
 ```python
 CHANNELS_SPECTACULAR_SETTINGS = {
     "AUTH_QUERY_PARAM": "token",      # adds httpApiKey query scheme
-    "AUTH_COOKIE_NAME": "sessionid",  # adds httpApiKey cookie scheme
+    "AUTH_COOKIE_NAME": "access_token",  # adds httpApiKey cookie scheme
 }
 ```
 
@@ -352,9 +386,9 @@ CHANNELS_SPECTACULAR_SETTINGS = {
 The interactive viewer's auth selector (`TRY_IT_OUT_ENABLED = True`) supports
 both schemes:
 
-- **Query param** — paste a token and click **Apply**; it appends
+- **Query param**: paste a token and click **Apply**; it appends
   `?token=<jwt>` to the WebSocket URL before connecting.
-- **Session cookie (automatic)** — the browser sends `sessionid`
+- **Session cookie (automatic)**: the browser sends `sessionid`
   automatically; just confirm you are logged in on the same origin.
 
 ---
@@ -417,8 +451,8 @@ urlpatterns = [
         "ws-docs/",
         AsyncAPIDocView.as_view(
             specs=[
-                ("Dispatch  /ws/dispatch/",      "/api/v1/ws-docs/dispatch/asyncapi.yaml"),
-                ("Notifications  /ws/notif/",    "/api/v1/ws-docs/notif/asyncapi.yaml"),
+                ("Dispatch  /ws/dispatch/", "/api/v1/ws-docs/dispatch/asyncapi.yaml"),
+                ("Notifications  /ws/notif/", "/api/v1/ws-docs/notif/asyncapi.yaml"),
             ],
         ),
     ),
@@ -488,8 +522,8 @@ usage: manage.py export_asyncapi [--consumer DOTTED.PATH[:/ws/path/] | --templat
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--consumer` | — | Dotted import path, optionally `:channel_path`. Repeatable. |
-| `--template` | — | Path to a hand-written AsyncAPI YAML template. |
+| `--consumer` | - | Dotted import path, optionally `:channel_path`. Repeatable. |
+| `--template` | - | Path to a hand-written AsyncAPI YAML template. |
 | `-o / --output` | `asyncapi.yaml` | Destination file. Parent dirs created automatically. |
 | `--host` | settings / `localhost:8000` | WS host for the servers block. |
 | `--protocol` | settings / `ws` | `ws` or `wss`. |
@@ -508,66 +542,6 @@ usage: manage.py export_asyncapi [--consumer DOTTED.PATH[:/ws/path/] | --templat
 | DRF `Serializer` subclass | Introspects `get_fields()` |
 | Pydantic `BaseModel` subclass | `model_json_schema()` (v2) or `schema()` (v1) |
 
-## Examples
-
-Both `@document_action` and `@document_event` accept an `examples` list.
-Each entry is a dict with optional `name` / `summary` strings and a `payload`
-dict of concrete values. Examples are emitted verbatim into the AsyncAPI spec
-and rendered by the viewer alongside the schema.
-
-```python
-@document_action(
-    summary="Request a ride",
-    payload=RequestRideSerializer,
-    examples=[
-        {
-            "name": "Cash payment",
-            "summary": "Rider pays with cash at destination",
-            "payload": {
-                "action": "request_ride",
-                "pickup_lat": 6.5244,
-                "pickup_lng": 3.3792,
-                "fare": "1500.00",
-                "payment_method": "cash",
-            },
-        },
-        {
-            "name": "Card payment",
-            "payload": {
-                "action": "request_ride",
-                "pickup_lat": 6.5244,
-                "pickup_lng": 3.3792,
-                "fare": "1800.00",
-                "payment_method": "card",
-            },
-        },
-    ],
-)
-async def handle_request_ride(self, content): ...
-
-@document_event(
-    "ride.offer",
-    summary="Offer pushed to driver",
-    payload=RideOfferSerializer,
-    examples=[
-        {
-            "name": "Standard offer",
-            "payload": {
-                "type": "ride.offer",
-                "ride_id": "d290f1ee-6c54-4b01-90e6-d701748f0851",
-                "fare": "1500.00",
-                "driver_name": "Emeka",
-                "expires_at": 1717000015.0,
-            },
-        },
-    ],
-)
-async def ride_offer(self, event): ...
-```
-
-A discriminator `const` property is always injected:
-- Send messages get `"action": {"type": "string", "const": "<action>"}`.
-- Receive messages get `"type": {"type": "string", "const": "<event_type>"}`.
 
 ### Python / dataclass → JSON Schema
 
@@ -658,110 +632,6 @@ how your codebase is structured:
 
 ---
 
-## PyPI publishing
-
-The package uses [Hatch](https://hatch.pypa.io/) as the build backend.
-
-### One-time setup
-
-```bash
-pip install hatch twine
-```
-
-Create a PyPI API token at <https://pypi.org/manage/account/token/> and
-store it in `~/.pypirc`:
-
-```ini
-[distutils]
-index-servers = pypi
-
-[pypi]
-username = __token__
-password = pypi-<your-token-here>
-```
-
-Or export it for the session:
-
-```bash
-export TWINE_USERNAME=__token__
-export TWINE_PASSWORD=pypi-<your-token-here>
-```
-
-### Build and publish
-
-```bash
-# 1. Bump version in pyproject.toml and channels_spectacular/__init__.py
-# 2. Build
-hatch build                   # → dist/*.tar.gz and dist/*.whl
-twine check dist/*            # validate before uploading
-twine upload dist/*           # publish to PyPI
-```
-
-Test against TestPyPI first:
-
-```bash
-twine upload --repository testpypi dist/*
-pip install --index-url https://test.pypi.org/simple/ django-channels-spectacular
-```
-
-### Automated publishing via GitHub Actions
-
-Create `.github/workflows/publish.yml`:
-
-```yaml
-name: Publish to PyPI
-
-on:
-  push:
-    tags:
-      - "v*"
-
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write   # OIDC trusted publishing — no stored API token needed
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install hatch
-      - run: hatch build
-      - uses: pypa/gh-action-pypi-publish@release/v1
-```
-
-Enable **Trusted Publishing** on PyPI (project Settings → Publishing) to
-skip storing an API token in GitHub Secrets.
-
----
-
-## ReadTheDocs
-
-The `docs/` directory contains a Sphinx project ready to publish on
-ReadTheDocs using the [Furo](https://pradyunsg.me/furo/) theme.
-
-### Local preview
-
-```bash
-cd docs
-pip install -r requirements.txt
-make html
-open _build/html/index.html    # macOS; use xdg-open on Linux
-```
-
-### ReadTheDocs setup
-
-1. Import the GitHub repo at <https://readthedocs.org/dashboard/import/>
-2. `.readthedocs.yaml` at the repo root configures the build automatically —
-   no extra configuration in the RTD dashboard is needed.
-3. Set the default branch to `main`.
-
-Documentation rebuilds on every push to `main` and on every `v*` tag.
-
----
-
 ## Running the tests
 
 ```bash
@@ -789,9 +659,10 @@ uv sync --extra dev
 
 ### Submitting a pull request
 
-1. Fork the repository and create a feature branch from `main`.
-2. Make your changes, add tests, and confirm the suite passes.
-3. Open a pull request against `main` — one feature or fix per PR.
+1. Fork the repository.
+2. Make your changes and add tests.
+3. Open a pull request with a clear title and description.
+4. One feature or fix per PR makes review faster.
 
 ### Reporting bugs
 
