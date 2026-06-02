@@ -1,4 +1,4 @@
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from channels_spectacular.decorators import document_action, document_event
 from channels_spectacular.generator import AsyncAPIGenerator

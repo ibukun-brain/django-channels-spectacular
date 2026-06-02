@@ -5,6 +5,16 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-06-02
+
+### Fixed
+
+- `X | Y` union annotations in payloads now produce an `anyOf` schema on
+  Python 3.11 through 3.13. The union check previously looked for
+  `UnionType` on the `typing` module, where it does not exist on those
+  versions, so unions silently fell back to an empty schema. It now reads
+  `UnionType` from the `types` module.
+
 ## [0.1.0] - 2026-06-02
 
 Initial release.
