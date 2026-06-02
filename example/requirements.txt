@@ -1,0 +1,9 @@
+# Install the package from the repo root before running:
+#   pip install -e ..
+#
+# Then install the example's own dependencies:
+#   pip install -r requirements.txt
+
+django>=4.2
+channels>=4.0
+daphne>=4.0

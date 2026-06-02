@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title }} | AsyncAPI Docs</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; font-family: sans-serif; }
+
+    /* ------------------------------------------------------------------ */
+    /* Consumer switcher bar (multi-consumer mode only)                     */
+    /* ------------------------------------------------------------------ */
+    #switcher-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      font-size: 13px;
+      border-bottom: 1px solid #313244;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    #switcher-bar label { font-weight: 600; white-space: nowrap; color: #a6adc8; }
+    #consumer-select {
+      flex: 1;
+      max-width: 420px;
+      padding: 5px 10px;
+      background: #313244;
+      color: #cdd6f4;
+      border: 1px solid #45475a;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: monospace;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a6adc8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+    #consumer-select:focus { outline: 2px solid #89b4fa; }
+
+    /* ------------------------------------------------------------------ */
+    /* Main viewer                                                           */
+    /* ------------------------------------------------------------------ */
+    #root { min-height: 100vh; }
+
+    /* Restore monospace inline code in AsyncAPI viewer. */
+    .aui-root .prose :not(pre) > code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+                   "Liberation Mono", monospace;
+      background: #eef0f3;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 500;
+      color: #1f2933;
+    }
+    .aui-root .prose :not(pre) > code::before,
+    .aui-root .prose :not(pre) > code::after { content: "" !important; }
+
+    /* Keep sidebar inline above 1024 px. */
+    @media (min-width: 1024px) {
+      .aui-root .container\:xl .sidebar {
+        position: relative; display: block; height: auto; width: 16rem;
+      }
+      .aui-root .container\:xl .sidebar--content { width: 14rem; }
+      .aui-root .container\:xl .burger-menu { display: none; }
+    }
+
+    /* On extra-large screens push main content left instead of overlaying it. */
+    @media (min-width: 1440px) {
+      body { transition: margin-right .22s ease; }
+      body.tio-open { margin-right: 460px; }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Floating action button                                               */
+    /* ------------------------------------------------------------------ */
+    #tio-fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 10001;
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      border-radius: 28px;
+      padding: 11px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 12px rgba(26,115,232,.35);
+      transition: transform .15s, box-shadow .15s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+      line-height: 1;
+    }
+    #tio-fab:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(26,115,232,.5);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Try-it-out side drawer                                               */
+    /* ------------------------------------------------------------------ */
+    #try-it-out {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: 460px;
+      background: #fff;
+      box-shadow: -4px 0 24px rgba(0,0,0,.12);
+      transform: translateX(100%);
+      transition: transform .22s ease;
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+      z-index: 9999;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #1a1a1a;
+    }
+    #try-it-out.open { transform: translateX(0); }
+
+    /* Header */
+    .tio-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      flex-shrink: 0;
+    }
+    .tio-header h2 { margin: 0; font-size: 15px; font-weight: 700; color: #1a1a1a; }
+    #tio-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 17px;
+      color: #aaa;
+      padding: 0;
+      line-height: 1;
+    }
+    #tio-close:hover { color: #444; }
+
+    /* Scrollable body */
+    .tio-body { padding: 14px 16px 20px; overflow-y: auto; flex: 1; }
+
+    /* Description */
+    .tio-desc {
+      font-size: 12px;
+      color: #555;
+      line-height: 1.6;
+      margin: 0 0 6px;
+    }
+    .tio-desc strong { color: #1a1a1a; }
+
+    /* Auth paths list */
+    .tio-auth-paths {
+      font-size: 12px;
+      color: #555;
+      line-height: 1.6;
+      margin: 2px 0 0;
+      padding-left: 18px;
+    }
+    .tio-auth-paths li { margin-bottom: 5px; }
+    .tio-desc code, .tio-auth-paths code {
+      font-family: monospace;
+      background: #f3f4f6;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 11px;
+      color: #c0392b;
+    }
+
+    /* Section dividers */
+    .tio-divider { border: none; border-top: 1px solid #f0f0f0; margin: 12px 0; }
+
+    /* Section labels */
+    .tio-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: #888;
+      margin: 12px 0 5px;
+    }
+
+    /* Inputs / selects / textareas */
+    .tio-body input[type=text],
+    .tio-body select,
+    .tio-body textarea {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 12px;
+      font-family: monospace;
+      color: #1a1a1a;
+      background: #fff;
+      outline: none;
+    }
+    .tio-body input[type=text]:focus,
+    .tio-body select:focus,
+    .tio-body textarea:focus {
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 2px rgba(26,115,232,.1);
+    }
+    .tio-body textarea { resize: vertical; min-height: 90px; }
+
+    /* Flex rows */
+    .tio-row { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+    .tio-row input { flex: 1; margin: 0; }
+
+    /* Buttons */
+    .tio-body button {
+      padding: 7px 14px;
+      border: none;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      line-height: 1;
+    }
+    #connect-btn    { background: #1a73e8; color: #fff; }
+    #disconnect-btn { background: #424242; color: #fff; display: none; }
+    #jwt-apply-btn  { background: #1a73e8; color: #fff; }
+    #jwt-clear-btn  { background: #f1f3f4; color: #444; border: 1px solid #ddd; }
+    #send-btn       { background: #1a73e8; color: #fff; }
+    #clear-log-btn  {
+      background: transparent;
+      color: #999;
+      border: 1px solid #e0e0e0;
+      font-size: 11px;
+      padding: 4px 10px;
+    }
+
+    /* Connection status row */
+    .tio-conn-row { display: flex; align-items: center; gap: 8px; }
+    #conn-status {
+      font-size: 11px;
+      font-family: monospace;
+      color: #e53935;
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #conn-status.connected { color: #2e7d32; }
+
+    /* Send row */
+    .tio-send-row { display: flex; justify-content: flex-end; margin-top: 6px; }
+
+    /* Event log */
+    #event-log {
+      margin-top: 10px;
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 5px;
+      padding: 8px 10px;
+      font-family: monospace;
+      font-size: 11px;
+      max-height: 180px;
+      overflow-y: auto;
+      color: #333;
+      line-height: 1.55;
+    }
+    .log-out { color: #1a73e8; }
+    .log-in  { color: #2e7d32; }
+    .log-err { color: #e53935; }
+    .log-sys { color: #999; }
+
+    /* Log footer */
+    .tio-log-footer { display: flex; justify-content: flex-end; margin-top: 5px; }
+  </style>
+</head>
+<body>
+
+  {% if specs %}
+  <div id="switcher-bar">
+    <label for="consumer-select">Consumer</label>
+    <select id="consumer-select">
+      {% for spec in specs %}
+      <option value="{{ spec.url }}">{{ spec.label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+
+  <div id="root"></div>
+
+  {% if try_it_out %}
+  <!-- Floating action button -->
+  <button id="tio-fab">⚡ Try it out</button>
+
+  <!-- Side drawer -->
+  <div id="try-it-out"{% if try_it_out_expanded %} class="open"{% endif %}>
+
+    <div class="tio-header">
+      <h2>Try it out</h2>
+      <button id="tio-close" title="Close">✕</button>
+    </div>
+
+    <div class="tio-body">
+
+      <p class="tio-desc">
+        Dev-only panel. Connects to <code id="tio-ws-url">ws://…</code>.
+      </p>
+
+      <!-- Auth method selector -->
+      <span class="tio-label">Auth method</span>
+      <select id="auth-method-select">
+        <option value="session">Session cookie (auto)</option>
+        <option value="cookie">Cookie JWT ({{ auth_cookie_name }}=…)</option>
+        <option value="query">Query param (?{{ auth_query_param }}=…)</option>
+      </select>
+
+      <!-- Session cookie panel -->
+      <div id="auth-session" class="tio-auth-panel">
+        <p class="tio-desc" style="margin-top:8px">
+          Log in via <code>/admin/</code> or your backend login in another
+          tab. The <code>{{ auth_session_cookie }}</code> cookie is
+          forwarded automatically — nothing to configure here.
+        </p>
+      </div>
+
+      <!-- Cookie JWT panel -->
+      <div id="auth-cookie" class="tio-auth-panel" style="display:none">
+        <div style="margin-top:8px">
+          <input id="jwt-cookie-name" type="text"
+                 value="{{ auth_cookie_name }}" placeholder="cookie name" />
+          <div class="tio-row">
+            <input id="jwt-cookie-value" type="text"
+                   placeholder="JWT value" />
+            <button id="jwt-apply-btn">Apply</button>
+            <button id="jwt-clear-btn">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Query param JWT panel -->
+      <div id="auth-query" class="tio-auth-panel" style="display:none">
+        <div style="margin-top:8px">
+          <input id="query-token-value" type="text"
+                 placeholder="JWT token value" />
+          <p class="tio-desc" style="margin-top:5px">
+            Appends <code>?{{ auth_query_param }}=&lt;token&gt;</code>
+            to the WS URL when you click Connect.
+          </p>
+        </div>
+      </div>
+
+      <hr class="tio-divider" />
+
+      <!-- Connect / Disconnect / status -->
+      <div class="tio-conn-row">
+        <button id="connect-btn">Connect</button>
+        <button id="disconnect-btn">Disconnect</button>
+        <span id="conn-status"></span>
+      </div>
+
+      <!-- Action -->
+      <span class="tio-label">Action</span>
+      <select id="action-select"></select>
+
+      <!-- Payload -->
+      <span class="tio-label">Payload (JSON)</span>
+      <textarea id="payload-input">{}</textarea>
+
+      <div class="tio-send-row">
+        <button id="send-btn">Send</button>
+      </div>
+
+      <!-- Event log -->
+      <div id="event-log"><span class="log-sys">— not connected —</span></div>
+      <div class="tio-log-footer">
+        <button id="clear-log-btn">Clear log</button>
+      </div>
+
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- AsyncAPI React component (CDN) -->
+  <link rel="stylesheet"
+    href="https://unpkg.com/@asyncapi/react-component@latest/styles/default.min.css" />
+  <script
+    src="https://unpkg.com/@asyncapi/react-component@latest/browser/standalone/index.js">
+  </script>
+
+  <script>
+  (function () {
+    const $ = id => document.getElementById(id);
+
+    // Shared WS URL — set by spec parsing, used by connect.
+    let wsUrl = '';
+
+    // ------------------------------------------------------------------ //
+    // Spec loader                                                           //
+    // ------------------------------------------------------------------ //
+    function loadSpec(specUrl) {
+      AsyncApiStandalone.render(
+        {
+          schema: { url: specUrl },
+          config: { show: { sidebar: true, info: true, servers: true } },
+        },
+        document.getElementById('root')
+      );
+      {% if try_it_out %}
+      populateActions(specUrl);
+      {% endif %}
+    }
+
+    loadSpec('{{ spec_url }}');
+
+    // ------------------------------------------------------------------ //
+    // WS URL helper — parses the spec YAML and extracts the WS URL.       //
+    // Used both by the switcher and by the single-consumer initial load.   //
+    // ------------------------------------------------------------------ //
+    function parseWsUrl(yaml) {
+      const hostMatch  = yaml.match(/^\s+host:\s*(.+)$/m);
+      const protoMatch = yaml.match(/^\s+protocol:\s*(.+)$/m);
+      const addrMatch  = yaml.match(/^\s+address:\s*(.+)$/m);
+      if (hostMatch && protoMatch && addrMatch) {
+        return protoMatch[1].trim() + '://' +
+               hostMatch[1].trim() + addrMatch[1].trim();
+      }
+      return null;
+    }
+
+    function applyWsUrl(url) {
+      if (!url) return;
+      wsUrl = url;
+      {% if try_it_out %}
+      const el = $('tio-ws-url');
+      if (el) el.textContent = url;
+      {% endif %}
+    }
+
+    // ------------------------------------------------------------------ //
+    // Consumer switcher                                                     //
+    // ------------------------------------------------------------------ //
+    {% if specs %}
+    const switcher = $('consumer-select');
+
+    function deriveWsUrl(specUrl) {
+      fetch(specUrl)
+        .then(r => r.text())
+        .then(yaml => applyWsUrl(parseWsUrl(yaml)))
+        .catch(() => {});
+    }
+
+    switcher.addEventListener('change', () => {
+      const url = switcher.value;
+      loadSpec(url);
+      deriveWsUrl(url);
+    });
+
+    deriveWsUrl(switcher.value);
+    {% endif %}
+
+    {% if try_it_out %}
+    // ------------------------------------------------------------------ //
+    // Try-it-out panel                                                     //
+    // ------------------------------------------------------------------ //
+
+    // In single-consumer mode, derive the WS URL once from the spec.
+    {% if not specs %}
+    fetch('{{ spec_url }}')
+      .then(r => r.text())
+      .then(yaml => applyWsUrl(parseWsUrl(yaml)))
+      .catch(() => {});
+    {% endif %}
+
+    // FAB / close toggle.
+    const panel = $('try-it-out');
+    const fab   = $('tio-fab');
+
+    function setPanelOpen(open) {
+      panel.classList.toggle('open', open);
+      document.body.classList.toggle('tio-open', open);
+      fab.style.display = open ? 'none' : '';
+    }
+
+    // Sync FAB and body class with initial panel state (TRY_IT_OUT_EXPANDED).
+    if (panel.classList.contains('open')) {
+      document.body.classList.add('tio-open');
+      fab.style.display = 'none';
+    }
+
+    fab.addEventListener('click', () => setPanelOpen(true));
+    $('tio-close').addEventListener('click', () => setPanelOpen(false));
+
+    // ── Action dropdown ───────────────────────────────────────────────── //
+    function populateActions(specUrl) {
+      fetch(specUrl)
+        .then(r => r.text())
+        .then(yaml => {
+          const sel = $('action-select');
+          sel.innerHTML = '';
+          let inOps = false, currentOp = '';
+          for (const line of yaml.split('\n')) {
+            if (line.startsWith('operations:')) { inOps = true; continue; }
+            if (inOps) {
+              if (/^[^\s]/.test(line)) { inOps = false; continue; }
+              const m = line.match(/^  (\S+):$/);
+              if (m) { currentOp = m[1]; continue; }
+              if (currentOp && line.includes('action: send')) {
+                const opt = document.createElement('option');
+                opt.value = currentOp;
+                opt.textContent = currentOp;
+                sel.appendChild(opt);
+              }
+            }
+          }
+          if (sel.options.length) prefillPayload(sel.value);
+        })
+        .catch(() => {});
+    }
+
+    function prefillPayload(action) {
+      if (action) {
+        $('payload-input').value = JSON.stringify({ action }, null, 2);
+      }
+    }
+
+    $('action-select').addEventListener('change', () =>
+      prefillPayload($('action-select').value)
+    );
+
+    // ── Auth method selector ──────────────────────────────────────────── //
+    const authSel = $('auth-method-select');
+    function updateAuthPanel() {
+      ['session', 'cookie', 'query'].forEach(id => {
+        $('auth-' + id).style.display = authSel.value === id ? '' : 'none';
+      });
+    }
+    authSel.addEventListener('change', updateAuthPanel);
+
+    // ── JWT cookie auth ───────────────────────────────────────────────── //
+    $('jwt-apply-btn').addEventListener('click', () => {
+      const name = $('jwt-cookie-name').value.trim();
+      const val  = $('jwt-cookie-value').value.trim();
+      if (name && val) {
+        document.cookie = `${name}=${val}; path=/; SameSite=Strict`;
+      }
+    });
+
+    $('jwt-clear-btn').addEventListener('click', () => {
+      const name = $('jwt-cookie-name').value.trim();
+      if (name) document.cookie = `${name}=; path=/; max-age=0`;
+      $('jwt-cookie-value').value = '';
+    });
+
+    // ── Connection status helpers ─────────────────────────────────────── //
+    function log(msg, cls) {
+      const el = $('event-log');
+      const line = document.createElement('div');
+      line.className = cls;
+      const ts = new Date().toLocaleTimeString([], {
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        fractionalSecondDigits: 3,
+      });
+      line.textContent = ts + '  ' + msg;
+      el.appendChild(line);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function setStatus(text, connected) {
+      const el = $('conn-status');
+      el.textContent = text;
+      el.className = connected ? 'connected' : '';
+    }
+
+    // ── Connect ───────────────────────────────────────────────────────── //
+    let ws = null;
+
+    $('connect-btn').addEventListener('click', () => {
+      if (!wsUrl) { log('No WS URL — spec not loaded yet', 'log-err'); return; }
+      let connectUrl = wsUrl;
+      if (authSel.value === 'query') {
+        const token = $('query-token-value').value.trim();
+        if (token)
+          connectUrl += (connectUrl.includes('?') ? '&' : '?') +
+                        '{{ auth_query_param }}=' + encodeURIComponent(token);
+      }
+      ws = new WebSocket(connectUrl);
+      ws.onopen = () => {
+        log('↑ connected to ' + connectUrl, 'log-sys');
+        setStatus('Connected', true);
+        $('connect-btn').style.display    = 'none';
+        $('disconnect-btn').style.display = '';
+      };
+      ws.onmessage = e => log('← ' + e.data, 'log-in');
+      ws.onerror   = () => log('Connection error', 'log-err');
+      ws.onclose   = e => {
+        const msg = 'Closed (code ' + e.code + ')';
+        log('✗ ' + msg, 'log-sys');
+        setStatus(msg, false);
+        $('connect-btn').style.display    = '';
+        $('disconnect-btn').style.display = 'none';
+        ws = null;
+      };
+    });
+
+    $('disconnect-btn').addEventListener('click', () => ws && ws.close());
+
+    // ── Send ──────────────────────────────────────────────────────────── //
+    $('send-btn').addEventListener('click', () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        log('Not connected', 'log-err'); return;
+      }
+      const raw = $('payload-input').value.trim() || '{}';
+      try {
+        const obj = JSON.parse(raw);
+        if (!obj.action) obj.action = $('action-select').value;
+        const msg = JSON.stringify(obj);
+        ws.send(msg);
+        log('→ ' + msg, 'log-out');
+      } catch (e) {
+        log('Invalid JSON: ' + e.message, 'log-err');
+      }
+    });
+
+    // ── Clear log ─────────────────────────────────────────────────────── //
+    $('clear-log-btn').addEventListener('click', () => {
+      $('event-log').innerHTML =
+        '<span class="log-sys">— log cleared —</span>';
+    });
+
+    {% endif %}
+  })();
+  </script>
+</body>
+</html>

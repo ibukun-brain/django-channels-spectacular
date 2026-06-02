@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "django-channels-spectacular"
+version = "0.1.0"
+description = "AsyncAPI 3.0 documentation generator for Django Channels WebSocket consumers"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "BSD-3-Clause" }
+keywords = ["django", "channels", "websocket", "asyncapi", "documentation"]
+classifiers = [
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Documentation",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "django>=4.2",
+    "channels>=4.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+drf = ["djangorestframework>=3.14"]
+dev = [
+    "pytest>=8.0",
+    "pytest-django>=4.8",
+    "pytest-cov>=5.0",
+    "djangorestframework>=3.14",
+    "channels>=4.0",
+    "flake8>=7.0",
+    "isort>=5.13",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.django_settings"
+python_files = ["test_*.py"]
+addopts = "-ra --tb=short"
+
+[tool.hatch.build.targets.wheel]
+packages = ["channels_spectacular"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "example/",
+    "tests/",
+    "docs/",
+    ".readthedocs.yaml",
+]
+
+[dependency-groups]
+dev = [
+    "furo>=2025.12.19",
+    "myst-parser>=5.1.0",
+    "sphinx>=9.0.4",
+    "sphinx-autodoc-typehints>=3.6.1",
+    "sphinx-copybutton>=0.5.2",
+]
+docs = [
+    "sphinx-autobuild>=2025.8.25",
+]
