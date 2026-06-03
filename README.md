@@ -1,5 +1,7 @@
 # django-channels-spectacular
 
+[![Latest on Django Packages](https://img.shields.io/badge/PyPI-{{ django-channels-spectacular.slug
+}}-tags-8c3c26.svg)](https://djangopackages.org/packages/p/django-channels-spectacular/)
 [![PyPI](https://img.shields.io/pypi/v/django-channels-spectacular.svg?v=2)](https://pypi.org/project/django-channels-spectacular/)
 [![License: BSD-3](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
 [![CI](https://github.com/ibukun-brain/django-channels-spectacular/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/ibukun-brain/django-channels-spectacular/actions/workflows/ci.yml)
